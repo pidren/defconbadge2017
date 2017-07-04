@@ -10,6 +10,8 @@ Adafruit_SSD1306 display(OLED_RESET);
 #define LOGO16_GLCD_HEIGHT 16 
 #define LOGO16_GLCD_WIDTH  16 
 
+
+
 // ------ PIN MAPPINGS --------
 #define BUILTIN_LED 16 // G of BOTTOM_RGB
 #define D0  16         // G of BOTTOM_RGB
@@ -29,6 +31,7 @@ Adafruit_SSD1306 display(OLED_RESET);
 #define TEST D10
 
 
+// Adafruit Logo -- XXX: change this!!!
 static const unsigned char PROGMEM logo16_glcd_bmp[] =
 { B00000000, B11000000,
   B00000001, B11000000,
@@ -47,16 +50,12 @@ static const unsigned char PROGMEM logo16_glcd_bmp[] =
   B01110000, B01110000,
   B00000000, B00110000 };
 
-#if (SSD1306_LCDHEIGHT != 64)
-#error("Height incorrect, please fix Adafruit_SSD1306.h!");
-#endif
-
 void setup()   {  
   Serial.begin(9600);
 
-  // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3D (for the 128x64)
-  // init done
+  // Generate the high voltage from the 3.3v line internally
+  // Initialize with the I2C addr 0x3D (for the 128x64)
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  
   
   // Show image buffer on the display hardware.
   // Since the buffer is intialized with an Adafruit splashscreen
@@ -67,14 +66,6 @@ void setup()   {
   // Clear the buffer.
   display.clearDisplay();
 
-  // draw a single pixel
-  //display.drawPixel(10, 10, WHITE);
-  // Show the display buffer on the hardware.
-  // NOTE: You _must_ call display after making any drawing commands
-  // to make them visible on the display hardware!
-  //display.display();
-  //delay(2000);
-  //display.clearDisplay();
   pinMode(TEST, OUTPUT);
 }
   
