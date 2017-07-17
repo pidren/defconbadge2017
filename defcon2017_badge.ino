@@ -1,38 +1,22 @@
+// ** TODO ** bitmap logo or banner
+// ** TODO ** sychronization
+
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <ESP8266WiFi.h> //***TODO*** MIght not need this
-#include <ESP8266WebServer.h> //***TODO*** Might not need this
-#include <ESP8266mDNS.h> //***TODO*** Might not need this
+#include <ESP8266WiFi.h>
+#include <WiFiUdp.h>
 
+
+//--------------------------------------------------------------------------------
+// ------------------------------ SCREEN CONSTS ----------------------------------
+//--------------------------------------------------------------------------------
+#define LOGO16_GLCD_HEIGHT 16 
+#define LOGO16_GLCD_WIDTH  16 
 #define OLED_RESET LED_BUILTIN //4
 Adafruit_SSD1306 display(OLED_RESET);
 
-#define LOGO16_GLCD_HEIGHT 16 
-#define LOGO16_GLCD_WIDTH  16 
-
-//--------------------------------------------------------------------------------
-// ------------------------------ BITMAP LOGO ------------------------------------
-//--------------------------------------------------------------------------------
-//*** TODO: Need to change this to some logo that is useful.
-static const unsigned char PROGMEM logo16_glcd_bmp[] =
-{ B00000001, B10000000,
-  B00000001, B11000000,
-  B00000011, B11100000,
-  B00000111, B11110000,
-  B11111111, B11111111,
-  B00011111, B11111000,
-  B00001111, B11110000,
-  B00000111, B11100000,
-  B00001111, B11110000,
-  B00011111, B11111000,
-  B00111110, B01111100,
-  B01111000, B00011110,
-  B11000000, B00000011,
-  B00000000, B00000000,
-  B00000000, B00000000,
-  B00000000, B00000000 };
 
 //--------------------------------------------------------------------------------
 // ------------------------------ PIN MAPPINGS -----------------------------------
@@ -63,10 +47,11 @@ uint8_t BOT_LT_RGB[] = {D10,D8,D9};
 #define B 2
 
 //--------------------------------------------------------------------------------
-//--------------------------------- WIFI SERVER ----------------------------------
+//--------------------------------- WIFI NODE ------------------------------------
 //--------------------------------------------------------------------------------
-WiFiServer server(80); //ESP8266WebServer serv(80);
-
+WiFiUDP node;
+#define IAMSERVER 1
+#define PORT 80
 
 //--------------------------------------------------------------------------------
 //--------------------------------- TEXT HELPERS ---------------------------------
@@ -80,20 +65,6 @@ void writeStatus(String s){
   display.display();
 }
 
-void writeBanner(void){
-  display.clearDisplay();
-  // *** TODO: Want to use logo16_glcd_bmp for bitmap logo here ***
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.setCursor(12,0);
-  display.print("DEFCON 25");
-  display.setCursor(12,20);
-  display.print("<< MRB >>");
-  display.setCursor(28,55);
-  display.setTextSize(1);
-  display.print("CUSTOM BADGE");
-  display.display();
-}
 
 //--------------------------------------------------------------------------------
 //---------------------------- ANIMATION HELPERS ---------------------------------
@@ -116,7 +87,6 @@ void setLED(uint8_t led, uint8_t v){
 }
 
 void rainbowRGB(uint8_t* rgb){
-  Serial.println("Showing RGB Rainbow");
   //Tries to simulate rainbow for all RGB LEDs
   //Red(255,0,0) --> Green(0,255,0) --> Blue(0,0,255)
   setRGB(rgb,255,0,0);
@@ -132,7 +102,6 @@ void rainbowRGB(uint8_t* rgb){
 }
 
 void flickerLED(uint8_t led){
-  Serial.println("Flickering LED" + String(led));
   //Quick flicker animation for LED, best used for visual status
   digitalWrite(led, HIGH);
   delay(10);
@@ -171,35 +140,48 @@ void printWifiStat(int s){
   }
 }
 
-void setupServer(const char* ssid, const char* password){
-  WiFi.begin(ssid,password);
+void setupNode(void){
+  WiFi.begin("Unicorn","stankybutt");
   while(WiFi.status() != WL_CONNECTED){
-    delay(500);
+    flickerLED(TL);
+    delay(250);
+    flickerLED(TR);
     printWifiStat(WiFi.status());
+    delay(250);
   }  
-  server.begin();
+  node.begin(PORT);
 }
-uint8_t cnt = 0;
-void serverListen(void){
-  cnt++;
-  writeStatus("SERVER LISTENING " + String(cnt));
-  //WiFiClient client = server.available();
-  //if(client){
-  //  if(client.connected()){
-  //    Serial.println("Connected to client.");
-  //  } else {
-  //    Serial.println("Not connected to client."); 
-  //  }
-  //  client.stop();
-  //} else {
-  //  Serial.println("No client detected.");
-  //}
+
+
+void respond(void){
+  writeStatus("Trying to respond...");
+  delay(500);
+  int pkt = node.parsePacket();
+  if(pkt){
+    writeStatus("Received packet size " + String(pkt) + " from " + String(node.remoteIP()) + " port " + String(node.remotePort()));
+     
+    char pktBuf[255];
+    int len = node.read();
+    if (len > 0) {
+      pktBuf[len] = 0;
+    }
+    writeStatus("Received contents: " + String(pktBuf));
+      
+    char replyBuf[] = "Hello!";
+    node.beginPacket(node.remoteIP(), node.remotePort());
+    node.write(replyBuf);
+    node.endPacket();
+  } else {
+    writeStatus("Received nothing.");
+  }
 }
+
 
 //--------------------------------------------------------------------------------
 //----------------------------------- SETUP --------------------------------------
 //--------------------------------------------------------------------------------
 void setup()   {  
+  delay(500);
   // Set baud rate to 115200 for Serial Logs
   Serial.begin(115200);
   
@@ -216,30 +198,8 @@ void setup()   {
   display.println("Loading...");
   display.display();
   
-  //Initialize RGB LED
-  display.setCursor(0,18);
-  display.println("Preparing RGBs...");
-  display.display();
-  setupRGBs();
-  delay(800);
-
-  //Setup Server
-  display.setCursor(0,28);
-  display.println("Starting server...");
-  display.display();
-  const char* ssid = "Unicorn"; //***TODO*** CHANGE THIS  
-  const char* password = "stankybutt"; //***TODO*** CHANGE THIS
-  setupServer(ssid, password);  
-  display.setCursor(0,38);
-  display.println("Connected to " + String(ssid));
-  display.display();
-  display.setCursor(0,48);
-  display.println("My IP is " + String(WiFi.localIP()));
-  display.display();
-  delay(800);
-  
   // Initialize Pins (note: putting this in a loop does not work.)
-  display.setCursor(0,58);
+  display.setCursor(0,17);
   display.println("Preparing pins...");
   display.display();
   pinMode(BOT_MD_RGB[R],OUTPUT);
@@ -253,26 +213,41 @@ void setup()   {
   pinMode(BOT_RT_RGB[B],OUTPUT);
   pinMode(TL,OUTPUT);
   pinMode(TR,OUTPUT);
+  delay(500);
+  
+  //Initialize RGB LED
+  display.setCursor(0,27);
+  display.println("Preparing RGBs...");
+  display.display();
+  setupRGBs();
   delay(800);
-  
-  // Show Default Banner
-  writeBanner();
-  delay(8000);
+
+  //Setup Server
+  display.setCursor(0,37);
+  display.print("Starting server...");
+  display.display();
+  setupNode();  
+  display.setCursor(0,47);
+  display.println("Done.");
+  display.display();
+  display.setCursor(0,57);
+  display.println("My IP is " + String(WiFi.localIP()));
+  display.display();
+  delay(800);
 }
-  
+
 
 //--------------------------------------------------------------------------------
 //--------------------------------- MAIN LOOP ------------------------------------
 //--------------------------------------------------------------------------------
-void loop() {
-  serverListen();  
+void loop() { 
+  respond();
   rainbowRGB(BOT_MD_RGB);
   flickerLED(TL);
   rainbowRGB(BOT_LT_RGB);
   flickerLED(TR);
   rainbowRGB(BOT_RT_RGB);
-  serverListen();  
+  respond();
   flickerLED(TL);
   flickerLED(TR);
-  //***TODO*** May want to unroll rainbowRGB and listen in between setRGB calls
 }
