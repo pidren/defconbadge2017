@@ -61,6 +61,8 @@ void writeStatus(String s){
   display.setTextSize(1);
   display.setTextColor(WHITE);
   display.setCursor(0,0);
+  display.println(WiFi.localIP());
+  display.setCursor(0,17);
   display.println(s);
   display.display();
 }
@@ -155,17 +157,27 @@ void setupNode(void){
 
 void respond(void){
   writeStatus("Trying to respond...");
+  
+  IPAddress ip(192,168,42,77);
+  char buf[] = "FIRST!";
+  node.beginPacket(ip, 80);
+  node.write(buf);
+  node.endPacket(); 
+  
+  
   delay(500);
   int pkt = node.parsePacket();
   if(pkt){
     writeStatus("Received packet size " + String(pkt) + " from " + String(node.remoteIP()) + " port " + String(node.remotePort()));
+    delay(500); 
      
     char pktBuf[255];
-    int len = node.read();
+    int len = node.read(pktBuf,255);
     if (len > 0) {
       pktBuf[len] = 0;
     }
-    writeStatus("Received contents: " + String(pktBuf));
+    writeStatus(String(pktBuf));
+    delay(500);
       
     char replyBuf[] = "Hello!";
     node.beginPacket(node.remoteIP(), node.remotePort());
@@ -229,9 +241,6 @@ void setup()   {
   setupNode();  
   display.setCursor(0,47);
   display.println("Done.");
-  display.display();
-  display.setCursor(0,57);
-  display.println("My IP is " + String(WiFi.localIP()));
   display.display();
   delay(800);
 }
