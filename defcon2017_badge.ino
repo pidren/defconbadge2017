@@ -50,7 +50,6 @@ uint8_t BOT_LT_RGB[] = {D10,D8,D9};
 //--------------------------------- WIFI NODE ------------------------------------
 //--------------------------------------------------------------------------------
 WiFiUDP node;
-#define IAMSERVER 1
 #define PORT 80
 
 //--------------------------------------------------------------------------------
@@ -62,9 +61,10 @@ void writeStatus(String s){
   display.setTextColor(WHITE);
   display.setCursor(0,0);
   display.println(WiFi.localIP());
-  display.setCursor(0,17);
+  display.setCursor(0,16);
   display.println(s);
   display.display();
+  delay(500);
 }
 
 
@@ -157,19 +157,27 @@ void setupNode(void){
 
 void respond(void){
   writeStatus("Trying to respond...");
-  
-  IPAddress ip(192,168,42,77);
-  char buf[] = "FIRST!";
-  node.beginPacket(ip, 80);
-  node.write(buf);
-  node.endPacket(); 
-  
-  
+  flickerLED(TL);
   delay(500);
+  flickerLED(TR);
+  delay(500);
+  
+  // --- HACK FOR 2 SERVERS ONLY ---
+  uint8_t HACK = 0;
+  if(HACK){
+    IPAddress ip(192,168,42,77);
+    char buf[] = "FIRST!";
+    node.beginPacket(ip, 80);
+    node.write(buf);
+    node.endPacket();
+  } 
+  // ------
+  
   int pkt = node.parsePacket();
   if(pkt){
+    flickerLED(TL);
+    flickerLED(TR);
     writeStatus("Received packet size " + String(pkt) + " from " + String(node.remoteIP()) + " port " + String(node.remotePort()));
-    delay(500); 
      
     char pktBuf[255];
     int len = node.read(pktBuf,255);
@@ -177,7 +185,6 @@ void respond(void){
       pktBuf[len] = 0;
     }
     writeStatus(String(pktBuf));
-    delay(500);
       
     char replyBuf[] = "Hello!";
     node.beginPacket(node.remoteIP(), node.remotePort());
@@ -211,7 +218,7 @@ void setup()   {
   display.display();
   
   // Initialize Pins (note: putting this in a loop does not work.)
-  display.setCursor(0,17);
+  display.setCursor(0,16);
   display.println("Preparing pins...");
   display.display();
   pinMode(BOT_MD_RGB[R],OUTPUT);
@@ -228,18 +235,18 @@ void setup()   {
   delay(500);
   
   //Initialize RGB LED
-  display.setCursor(0,27);
+  display.setCursor(0,26);
   display.println("Preparing RGBs...");
   display.display();
   setupRGBs();
   delay(800);
 
   //Setup Server
-  display.setCursor(0,37);
+  display.setCursor(0,36);
   display.print("Starting server...");
   display.display();
   setupNode();  
-  display.setCursor(0,47);
+  display.setCursor(0,46);
   display.println("Done.");
   display.display();
   delay(800);
@@ -252,11 +259,8 @@ void setup()   {
 void loop() { 
   respond();
   rainbowRGB(BOT_MD_RGB);
-  flickerLED(TL);
-  rainbowRGB(BOT_LT_RGB);
-  flickerLED(TR);
-  rainbowRGB(BOT_RT_RGB);
   respond();
-  flickerLED(TL);
-  flickerLED(TR);
+  rainbowRGB(BOT_LT_RGB);
+  respond();
+  rainbowRGB(BOT_RT_RGB);
 }
