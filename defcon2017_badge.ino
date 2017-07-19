@@ -1,6 +1,3 @@
-// ** TODO ** bitmap logo or banner
-// ** TODO ** sychronization
-
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -8,9 +5,8 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 
-
 //--------------------------------------------------------------------------------
-// ------------------------------ SCREEN CONSTS ----------------------------------
+// ---------------------------------- SCREEN -------------------------------------
 //--------------------------------------------------------------------------------
 #define LOGO16_GLCD_HEIGHT 16 
 #define LOGO16_GLCD_WIDTH  16 
@@ -46,14 +42,9 @@ uint8_t BOT_LT_RGB[] = {D10,D8,D9};
 #define G 1
 #define B 2
 
-//--------------------------------------------------------------------------------
-//--------------------------------- WIFI NODE ------------------------------------
-//--------------------------------------------------------------------------------
-WiFiUDP node;
-#define PORT 80
 
 //--------------------------------------------------------------------------------
-//--------------------------------- TEXT HELPERS ---------------------------------
+//---------------------------- ANIMATION HELPERS ---------------------------------
 //--------------------------------------------------------------------------------
 void writeStatus(String s){
   display.clearDisplay();
@@ -67,10 +58,6 @@ void writeStatus(String s){
   delay(500);
 }
 
-
-//--------------------------------------------------------------------------------
-//---------------------------- ANIMATION HELPERS ---------------------------------
-//--------------------------------------------------------------------------------
 void setupRGBs(void){
   setRGB(BOT_MD_RGB, 0, 0, 0);
   setRGB(BOT_LT_RGB, 0, 0, 0);
@@ -113,6 +100,11 @@ void flickerLED(uint8_t led){
 //--------------------------------------------------------------------------------
 //---------------------------- WIFI SERVER HELPERS -------------------------------
 //--------------------------------------------------------------------------------
+#define PORT 80
+WiFiUDP node;
+//I only printed 6 of these...
+IPAddress siblings[1];
+
 void printWifiStat(int s){
   switch(s){
     case WL_CONNECTED:
@@ -152,45 +144,76 @@ void setupNode(void){
     delay(250);
   }  
   node.begin(PORT);
+} 
+
+uint8_t currind = 0;
+boolean missingSiblings(){
+  if(currind < (sizeof(siblings)/sizeof(IPAddress))){
+    writeStatus("Missing siblings");
+    return true;
+  } 
+  return false;
 }
 
+//*** This needs to change so that we don't add the same addresses over and over again
+boolean addSibling(IPAddress newsib){
+  if(missingSiblings()){
+    siblings[currind] = newsib;
+    currind++;
+    return true; 
+  } else {
+    return false;
+  }
+}
 
 void respond(void){
-  writeStatus("Trying to respond...");
+  writeStatus("Listening...");
   flickerLED(TL);
-  delay(500);
+  delay(200);
   flickerLED(TR);
-  delay(500);
+  delay(200);
   
-  // --- HACK FOR 2 SERVERS ONLY ---
-  uint8_t HACK = 0;
-  if(HACK){
-    IPAddress ip(192,168,42,77);
-    char buf[] = "FIRST!";
-    node.beginPacket(ip, 80);
+  //If can add more siblings, try to broadcast yourself
+  if(missingSiblings()) {
+    IPAddress broadcastIP = WiFi.localIP();
+    broadcastIP[3] = 255; //turn last octal to broadcast
+    char buf[] = "BROADCAST";
+    node.beginPacket(broadcastIP, PORT);
     node.write(buf);
     node.endPacket();
-  } 
-  // ------
+  }
   
   int pkt = node.parsePacket();
-  if(pkt){
+  //Make sure we ignore packets that came from the badge itself
+  if(pkt && (node.remoteIP() != WiFi.localIP())){
+    //Received something!
     flickerLED(TL);
     flickerLED(TR);
-    writeStatus("Received packet size " + String(pkt) + " from " + String(node.remoteIP()) + " port " + String(node.remotePort()));
      
+    //Read in the packet payload and null terminate the end.
     char pktBuf[255];
     int len = node.read(pktBuf,255);
     if (len > 0) {
-      pktBuf[len] = 0;
+      pktBuf[len] = 0; 
     }
-    writeStatus(String(pktBuf));
+    
+    //If payload contains "BROADCAST" message, try to add the new sibling to list of siblings
+    if(String(pktBuf) == "BROADCAST"){
+      if(addSibling(node.remoteIP())){
+        writeStatus("Added new sibling: " + node.remoteIP().toString()); 
+      } else {
+        writeStatus("Could not add detected sibling: " + node.remoteIP().toString());
+      }
+    }
+    writeStatus("Received: " + String(pktBuf));
       
+    //Reply with a simple hello!
     char replyBuf[] = "Hello!";
     node.beginPacket(node.remoteIP(), node.remotePort());
     node.write(replyBuf);
     node.endPacket();
   } else {
+    //Didn't receive a packet.
     writeStatus("Received nothing.");
   }
 }
@@ -203,6 +226,9 @@ void setup()   {
   delay(500);
   // Set baud rate to 115200 for Serial Logs
   Serial.begin(115200);
+  
+  //Clear siblings IPAddress list
+  memset(siblings, 0, sizeof(siblings));
   
   // Generate the high voltage from the 3.3v line internally
   // Initialize with the I2C addr 0x3D (for the 128x64)
