@@ -146,23 +146,20 @@ void setupNode(void){
   node.begin(PORT);
 } 
 
-uint8_t currind = 0;
 boolean missingSiblings(){
-  if(currind < (sizeof(siblings)/sizeof(IPAddress))){
-    writeStatus("Missing siblings");
-    return true;
-  } 
+  for(int i=0; i < (sizeof(siblings)/sizeof(IPAddress)); i++){
+    if(siblings[i] == IPAddress(0,0,0,0)){
+      return true; 
+    }    
+  }
   return false;
 }
 
-//*** This needs to change so that we don't add the same addresses over and over again
 boolean addSibling(IPAddress newsib){
-  if(missingSiblings()){
-    siblings[currind] = newsib;
-    currind++;
-    return true; 
-  } else {
-    return false;
+  for(int i=0; i < (sizeof(siblings)/sizeof(IPAddress)); i++){
+    if(siblings[i] == IPAddress(0,0,0,0)){
+      siblings[i] = newsib; 
+    }
   }
 }
 
