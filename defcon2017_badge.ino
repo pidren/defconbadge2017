@@ -46,14 +46,23 @@ uint8_t BOT_LT_RGB[] = {D10,D8,D9};
 //--------------------------------------------------------------------------------
 //---------------------------- ANIMATION HELPERS ---------------------------------
 //--------------------------------------------------------------------------------
-void writeStatus(String s){
+#define START_X 0
+#define START_STATUS_Y 0
+#define START_TEXT_Y 18
+
+void writeStatus(String s1, String s2="", String s3="", String s4="", String s5=""){
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(WHITE);
-  display.setCursor(0,0);
+  display.setCursor(START_X,START_STATUS_Y);
   display.println(WiFi.localIP());
-  display.setCursor(0,16);
-  display.println(s);
+  display.println(WiFi.macAddress());
+  display.setCursor(START_X,START_TEXT_Y);
+  display.println(s1);
+  display.println(s2);
+  display.println(s3);
+  display.println(s4);
+  display.println(s5);
   display.display();
   delay(500);
 }
@@ -90,6 +99,26 @@ void rainbowRGB(uint8_t* rgb){
   }    
 }
 
+void rainbowAllRGB(void){
+  setRGB(BOT_LT_RGB,255,0,0);
+  setRGB(BOT_RT_RGB,255,0,0);
+  setRGB(BOT_MD_RGB,255,0,0);
+  delay(300);
+  for(int i=255; i>=0; i--){
+    setRGB(BOT_LT_RGB, i, abs(i-255), 0);
+    setRGB(BOT_RT_RGB, i, abs(i-255), 0);
+    setRGB(BOT_MD_RGB, i, abs(i-255), 0);
+    delay(2);
+  }
+  for(int i=255; i>=0; i--){
+    setRGB(BOT_LT_RGB, 0, i, abs(i-255));
+    setRGB(BOT_RT_RGB, 0, i, abs(i-255));
+    setRGB(BOT_MD_RGB, 0, i, abs(i-255));
+    delay(2); 
+  }   
+}
+
+
 void flickerLED(uint8_t led){
   //Quick flicker animation for LED, best used for visual status
   digitalWrite(led, HIGH);
@@ -102,8 +131,8 @@ void flickerLED(uint8_t led){
 //--------------------------------------------------------------------------------
 #define PORT 80
 WiFiUDP node;
-//I only printed 6 of these...
-IPAddress siblings[1];
+//I only printed 6 of these so there should be 5 other siblings at most...
+IPAddress siblings[5];
 
 void printWifiStat(int s){
   switch(s){
@@ -157,11 +186,30 @@ boolean missingSiblings(){
 
 boolean addSibling(IPAddress newsib){
   for(int i=0; i < (sizeof(siblings)/sizeof(IPAddress)); i++){
+    if(siblings[i] == newsib){
+      //If there is a duplicate, early exit
+      return false; 
+    }
+    
     if(siblings[i] == IPAddress(0,0,0,0)){
-      siblings[i] = newsib; 
+      //If new sibling added, early exit
+      siblings[i] = newsib;
+      return true; 
     }
   }
+  return false;
 }
+
+int numSiblings(void){
+  int i=0;
+  for(; i < (sizeof(siblings)/sizeof(IPAddress)); i++){
+    if(siblings[i] == IPAddress(0,0,0,0)){
+      return i;
+    }    
+  }
+  return i;
+}
+
 
 void respond(void){
   writeStatus("Listening...");
@@ -198,17 +246,40 @@ void respond(void){
     if(String(pktBuf) == "BROADCAST"){
       if(addSibling(node.remoteIP())){
         writeStatus("Added new sibling: " + node.remoteIP().toString()); 
+        setRGB(BOT_LT_RGB, 0, 255, 0);
+        setRGB(BOT_RT_RGB, 0, 255, 0);
+        setRGB(BOT_MD_RGB, 0, 255, 0);
+        delay(200);
       } else {
-        writeStatus("Could not add detected sibling: " + node.remoteIP().toString());
+        writeStatus("Didn't add sibling: " + node.remoteIP().toString());
+        setRGB(BOT_LT_RGB, 255, 0, 0);
+        setRGB(BOT_RT_RGB, 255, 0, 0);
+        setRGB(BOT_MD_RGB, 255, 0, 0);
+        delay(200);
       }
+      writeStatus("Number of Siblings: " + String(numSiblings()));
+      delay(200);
+    } else {
+      rainbowAllRGB();
+      writeStatus("Received: " + String(pktBuf), "From: " + node.remoteIP().toString());
+      delay(200);
     }
-    writeStatus("Received: " + String(pktBuf));
       
     //Reply with a simple hello!
-    char replyBuf[] = "Hello!";
-    node.beginPacket(node.remoteIP(), node.remotePort());
+    String msg = "Hello from " + WiFi.localIP().toString();
+    char replyBuf[msg.length()+1];
+    msg.toCharArray(replyBuf,msg.length()+1);
+    node.beginPacket(node.remoteIP(), PORT);
     node.write(replyBuf);
     node.endPacket();
+    
+    //Let's say hello to any other siblings we already have
+    writeStatus("Saying hi to all siblings");
+    for(int i=0; i<(sizeof(siblings)/sizeof(IPAddress)); i++){
+      node.beginPacket(siblings[i], PORT);
+      node.write(replyBuf);
+      node.endPacket();
+    }
   } else {
     //Didn't receive a packet.
     writeStatus("Received nothing.");
@@ -254,7 +325,7 @@ void setup()   {
   pinMode(BOT_RT_RGB[G],OUTPUT);
   pinMode(BOT_RT_RGB[B],OUTPUT);
   pinMode(TL,OUTPUT);
-  pinMode(TR,OUTPUT);
+  //pinMode(TR,OUTPUT); // This needs to be commented out for green board
   delay(500);
   
   //Initialize RGB LED
@@ -281,9 +352,6 @@ void setup()   {
 //--------------------------------------------------------------------------------
 void loop() { 
   respond();
-  rainbowRGB(BOT_MD_RGB);
-  respond();
-  rainbowRGB(BOT_LT_RGB);
-  respond();
-  rainbowRGB(BOT_RT_RGB);
+  delay(200);
 }
+
