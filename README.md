@@ -20,7 +20,7 @@ wear around your neck.
 - Each individual badge will connect to (unfortunately) hardcoded WiFi network.
 - Once connected to a WiFi network, the badges will try to find their "sibling" badges by broadcasting itself on the network.
 - A badge will never learn a sibling badge twice, but will try to find as many nearby siblings as possible.
-- When a badge knows of at least one sibling it is nearby presences it will start communicating.
+- When a badge knows of at least one sibling in nearby viscinity it will start communicating.
 - All badges will communicate to each other independently, and all badges will communicate to all other badges that is learned.
 
 
