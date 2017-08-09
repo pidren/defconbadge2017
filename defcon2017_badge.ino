@@ -44,6 +44,25 @@ uint8_t BOT_LT_RGB[] = {D10,D8,D9};
 
 
 //--------------------------------------------------------------------------------
+//---------------------------- EXPECTED BADGE ID ---------------------------------
+//--------------------------------------------------------------------------------
+String macIDs[6] = { "A0:20:A6:16:01:62",
+                     "A0:20:A6:17:50:6A",
+                     "A0:20:A6:1B:B2:DC",
+                     "A0:20:A6:16:D1:7D",
+                     "A0:20:A6:17:4D:1F",
+                     "A0:20:A6:17:47:91" };
+String ID;
+void getMyID(void){
+  for(int i=0; i<(sizeof(macIDs)/sizeof(String));i++){
+    if(macIDs[i].equals(String(WiFi.macAddress()))){
+      ID = "MRB" + String(i);
+    } 
+  }
+}
+
+
+//--------------------------------------------------------------------------------
 //---------------------------- ANIMATION HELPERS ---------------------------------
 //--------------------------------------------------------------------------------
 #define START_X 0
@@ -164,6 +183,7 @@ void printWifiStat(int s){
 }
 
 void setupNode(void){
+  WiFi.hostname(ID);
   WiFi.begin("Unicorn","stankybutt");
   while(WiFi.status() != WL_CONNECTED){
     flickerLED(TL);
