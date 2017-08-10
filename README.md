@@ -47,3 +47,10 @@ wear around your neck.
   - You must flash in NodeMCU 1.0 ESP 12E mode. This mode has all the settings you need for the board so you should not have to touch anything.
 - The battery does need manual assembly:
   - Clip off the JST end off of the LiPoly battery and solder onto the male microUSB part. 
+
+
+## Useful Links
+- [Pin mapping woes when addressing NodeMCU ESP GPIO pins in Arduino] (https://github.com/esp8266/Arduino/issues/584)
+- [If you accidentally "brick" your ESP and need to undo the damage] (https://github.com/espressif/esptool/issues/213)
+- [How to best work with SSD1306] (http://arduino-er.blogspot.com/2016/04/nodemcu-esp8266-to-display-on-128x64.html)
+
