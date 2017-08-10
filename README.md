@@ -3,7 +3,7 @@ Custom PCB design and code for DefCon 25 badge.
 Credits to @mschuldt for help with the PCB design.
 
 ## Demo Video
-[Link to Demo Video](https://www.youtube.com/edit?o=U&video_id=TrFcW3AFYnM)
+[Link to Demo Video](https://www.youtube.com/watch?v=TrFcW3AFYnM)
 
 ## Why was this built?
 For fun. Also I just wanted to learn how to do something I don't know how to do. At all.
