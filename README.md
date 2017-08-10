@@ -50,7 +50,7 @@ wear around your neck.
 
 
 ## Useful Links
-- [Pin mapping woes when addressing NodeMCU ESP GPIO pins in Arduino] (https://github.com/esp8266/Arduino/issues/584)
-- [If you accidentally "brick" your ESP and need to undo the damage] (https://github.com/espressif/esptool/issues/213)
-- [How to best work with SSD1306] (http://arduino-er.blogspot.com/2016/04/nodemcu-esp8266-to-display-on-128x64.html)
+- [Pin mapping woes when addressing NodeMCU ESP GPIO pins in Arduino](https://github.com/esp8266/Arduino/issues/584)
+- [If you accidentally "brick" your ESP and need to undo the damage](https://github.com/espressif/esptool/issues/213)
+- [How to best work with SSD1306](http://arduino-er.blogspot.com/2016/04/nodemcu-esp8266-to-display-on-128x64.html)
 
