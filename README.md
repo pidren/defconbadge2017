@@ -1,3 +1,5 @@
+![](defcon2017badge.jpg)
+
 # DEFCON 25 Custom Badge
 Custom PCB design and code for DefCon 25 badge.
 Credits to @mschuldt for help with the PCB design.
